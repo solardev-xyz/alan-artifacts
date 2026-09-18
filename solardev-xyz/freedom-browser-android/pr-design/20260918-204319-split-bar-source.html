@@ -1,0 +1,60 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; }
+  body { margin:0; width:1080px; height:2400px; font-family: Roboto, "Noto Sans", sans-serif; overflow:hidden; }
+  .screen { position:relative; width:1080px; height:2400px; background:#fff; color:#111; }
+  .status { height:120px; background:#f5edf9; display:flex; align-items:center; justify-content:space-between; padding:0 70px; font-size:36px; color:#4a4458; }
+  .page { padding: 0 44px; }
+  h1 { font-size:88px; margin:70px 0 60px; font-weight:700; }
+  p { font-size:40px; line-height:1.4; margin:0 0 50px; }
+  .bar { position:absolute; left:0; right:0; bottom:120px; height:132px; display:flex; align-items:center; justify-content:space-between; padding:0 48px; }
+  .round, .field {
+    background:rgba(255,255,255,0.68); backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.16), 0 1px 3px rgba(0,0,0,0.10);
+    border:1px solid rgba(0,0,0,0.06);
+  }
+  .round { width:132px; height:132px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .field { flex:1; height:132px; margin:0 26px; border-radius:66px; display:flex; align-items:center; padding:0 44px; }
+  .field .domain { flex:1; text-align:center; font-size:44px; font-weight:500; letter-spacing:-0.2px; }
+  svg { width:62px; height:62px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .menu { position:relative; }
+  .dot { position:absolute; top:6px; right:0px; width:26px; height:26px; border-radius:50%; background:#2ecc71; box-shadow:0 0 0 5px rgba(255,255,255,0.9); }
+  .tab { width:58px; height:58px; border-radius:14px; border:3.5px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:600; }
+  .navpill { position:absolute; bottom:30px; left:50%; transform:translateX(-50%); width:300px; height:12px; border-radius:6px; background:#333; }
+
+  .dark .screen { background:#0f1117; color:#e8e9ee; }
+  .dark .status { background:#181b25; color:#c5c7d2; }
+  .dark .round, .dark .field { background:rgba(40,44,58,0.72); border-color:rgba(255,255,255,0.10); box-shadow:0 10px 30px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.05) inset; }
+  .dark .dot { box-shadow:0 0 0 5px rgba(40,44,58,0.95); }
+  .dark .navpill { background:#bbb; }
+</style></head><body class="THEME">
+<div class="screen">
+  <div class="status"><span>5:08</span><span>▾◢ ▮</span></div>
+  <div class="page">
+    <h1>Long article 3</h1>
+    <p>paragraph 0 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 1 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 2 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 3 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 4 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 5 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 6 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 7 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 8 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 9 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 10 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 11 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 12 of a long article. Lorem ipsum dolor sit amet.</p>
+    <p>paragraph 13 of a long article. Lorem ipsum dolor sit amet.</p>
+  </div>
+  <div class="bar">
+    <div class="round"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></div>
+    <div class="field">
+      <div class="menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+      <div class="domain">vibing.at</div>
+      <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+    </div>
+    <div class="round"><div class="tab">3</div></div>
+  </div>
+  <div class="navpill"></div>
+</div>
+</body></html>
