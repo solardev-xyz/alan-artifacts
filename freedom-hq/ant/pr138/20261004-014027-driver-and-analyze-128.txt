@@ -1,0 +1,74 @@
+#!/bin/bash
+# Sequential #128 drive runs under the wallet lock. Stops on any ledger problem.
+set -u
+cd "$ALAN_SCRATCH"
+export ANT_KEY_FILE=$HOME/alan/secrets/gnosis-test.key
+export ANT_BATCH=0xdc24a8c40d5349a305cc3588d567a0c5d2f2aeb1c561665d44c596a48d73d0dd
+LOG="ANT_LOG=info,ant_p2p::pushsync_swap=debug,ant_retrieval::accounting=debug,ant_retrieval::fetcher=${FETCHER_LEVEL:-trace}"
+for spec in $RUNS; do
+  IFS=: read -r build bin label swap <<< "$spec"
+
+  # spendable check before a paid run: deposit 0.268 xBZZ minus every issued cheque
+  if [ "$swap" = true ]; then
+    left=$(python3 -c "import json;d=json.load(open('ledger/current.json'));print(${DEPOSITED_PLUR}-sum(int(v) for v in d.values()))")
+    echo "$(date -u +%FT%TZ) spendable_plur=$left before $label"
+    if [ "$left" -lt "$MIN_SPENDABLE_PLUR" ]; then echo "STOP: spendable $left below $MIN_SPENDABLE_PLUR before $label"; exit 3; fi
+  fi
+  echo "$(date -u +%FT%TZ) START $label ($build, swap=$swap)"
+  python3 run.py ./$bin $label drive SWAP_ENABLE=$swap UPLOAD_TIMEOUT_S=1800 SIZE_MB=${SIZE_MB:-300} "$LOG" > runs-$label.out 2>&1
+  echo "$(date -u +%FT%TZ) END $label rc=$?"
+  python3 analyze.py $label | tee -a summary.jsonl
+  if ! grep -q '"ledger_problems": {}' runs/$label/result.json; then echo "STOP: ledger problem in $label"; exit 2; fi
+done
+echo ALL_DONE
+#!/usr/bin/env python3
+"""Summarise one drive run: completion, time to 90/99/100 %, requeues,
+disconnects, and the credit gate's activity (branch only)."""
+import json, re, sys, os, collections
+S = os.environ["ALAN_SCRATCH"]
+label = sys.argv[1]
+d = f"{S}/runs/{label}"
+st = []
+for l in open(f"{d}/stdout.log"):
+    m = re.search(r"STATUS t=([\d.]+) (\{.*\})", l)
+    if m:
+        j = json.loads(m.group(2))
+        st.append((float(m.group(1)), j))
+res = json.load(open(f"{d}/result.json")) if os.path.exists(f"{d}/result.json") else {}
+total = next((j.get("chunks_total") for _, j in reversed(st) if j.get("chunks_total")), None)
+def first(frac):
+    for t, j in st:
+        if total and j.get("chunks_pushed", 0) >= frac * total:
+            return t
+    return None
+last_t, last = st[-1] if st else (None, {})
+c = collections.Counter()
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+for l in open(f"{d}/stderr.log", errors="replace"):
+    if "peer disconnected" in l: c["disconnects"] += 1
+    if "at its credit limit; trying the next-closest" in l: c["gate_skips"] += 1
+    if "at its credit limit; waiting for credit" in l: c["gate_waits"] += 1
+    if "giving up the walk" in l: c["gate_giveups"] += 1
+    if "connection is closed" in l: c["connection_is_closed"] += 1
+    if "exhausted pushsync peers" in l: c["exhausted_walks"] += 1
+    if "pushsync attempt failed; hedging" in l: c["hedge_after_failure"] += 1
+    if "shallow receipt; chunk stored but shallow" in l: c["shallow_receipts"] += 1
+row = {
+    "label": label,
+    "status": last.get("status"),
+    "chunks_total": total,
+    "chunks_pushed": last.get("chunks_pushed"),
+    "completion_pct": round(100 * last.get("chunks_pushed", 0) / total, 2) if total else None,
+    "t50": first(0.5), "t90": first(0.9), "t95": first(0.95), "t99": first(0.99),
+    "t100": next((t for t, j in st if j.get("status") == "completed"), None),
+    "requeued": last.get("chunks_requeued"),
+    "last_error": (last.get("last_error") or "")[:160],
+    "elapsed_s": last_t,
+    **dict(c),
+    "cheques_delivered": res.get("swap_cheques_delivered"),
+    "cheques_undelivered": res.get("swap_cheques_undelivered"),
+    "ledger_delta_plur": res.get("ledger_delta_plur"),
+    "payment_failures": res.get("payment_failures"),
+    "ledger_problems": res.get("ledger_problems"),
+}
+print(json.dumps(row))
