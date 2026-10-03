@@ -1,0 +1,396 @@
+{
+ "a-drive": {
+  "label": "a-drive",
+  "mode": "drive",
+  "rc": -15,
+  "wall_s": 1815.9,
+  "disconnects": 6967,
+  "pushsync_cheques_raw": 27409,
+  "pushsync_warn": 328592,
+  "pushsync_emit_failed": 8596,
+  "pushsync_reset_lines": 37,
+  "plur": {
+   "pushsync_raw": 25180050000
+  },
+  "peers_paid": 3184,
+  "ledger_total_before": 441989000057900,
+  "ledger_total_after": 442014180107900,
+  "ledger_delta_plur": 25180050000,
+  "new_beneficiaries": 2768,
+  "ledger_problems": {},
+  "top_pushsync_warns": {
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   pushsync stream: failed to": 170342,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   unexpected end of fi": 19449,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   unexpected end of file": 14359,
+   "warn: pushsync got a shallow receipt; chunk stored but shallow \u2014 trying for a deeper storer": 6181,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   put: reserve putter.Put: ov": 5,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   push to closest chunk e8bbc": 3
+  },
+  "harness": [
+   "0.51 PEERS 100",
+   "6.35 UPLOAD_START job=0000009d7ef33fd2 bytes=314572800"
+  ]
+ },
+ "a-stream": {
+  "label": "a-stream",
+  "mode": "stream",
+  "rc": 0,
+  "wall_s": 658.6,
+  "disconnects": 1027,
+  "pushsync_warn": 8697,
+  "pushsync_cheques_raw": 9078,
+  "pushsync_emit_failed": 990,
+  "pushsync_reset_lines": 1,
+  "plur": {
+   "pushsync_raw": 7984900000
+  },
+  "peers_paid": 870,
+  "ledger_total_before": 1125858922845300,
+  "ledger_total_after": 1125866907745300,
+  "ledger_delta_plur": 7984900000,
+  "new_beneficiaries": 73,
+  "ledger_problems": {},
+  "top_pushsync_warns": {
+   "warn: pushsync got a shallow receipt; chunk stored but shallow \u2014 trying for a deeper storer": 3354,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   pushsync stream: failed to": 1299,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   push to closest chunk 397c9": 763,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   unexpected end of fi": 747,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   put: reserve putter.Put: ov": 441,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   unexpected end of file": 235
+  },
+  "harness": [
+   "0.51 PEERS 100",
+   "6.01 STREAM_START seg_bytes=750000 segments=300",
+   "606.02 STREAM_CAPTURE_END pushed=300 dropped_at_push=192"
+  ],
+  "publisher": {
+   "segments_pushed": 301,
+   "segments_published": 91,
+   "segments_listed": 91,
+   "segments_failed": 17,
+   "segments_dropped": 192,
+   "bytes_published": 68250000,
+   "chunks_published": 17017,
+   "sustained_mbit_s": 0.8368118950479039,
+   "publish_ms_p50": 11209,
+   "publish_ms_p95": 45513,
+   "publish_ms_max": 59956,
+   "lag_ms_p50": 21039,
+   "lag_ms_p95": 89062,
+   "lag_ms_max": 167273,
+   "lag_ms_final": 51577,
+   "kept_up": false,
+   "error_count": 17
+  },
+  "publisher_errors": [
+   [
+    "media segment N: timed out after Ns",
+    8
+   ]
+  ]
+ },
+ "b-drive": {
+  "label": "b-drive",
+  "mode": "drive",
+  "rc": -15,
+  "wall_s": 1805.0,
+  "disconnects": 5954,
+  "pushsync_warn": 80440,
+  "swap_cheques_delivered": 10527,
+  "swap_cheques_undelivered": 1123,
+  "pushsync_reset_lines": 2267,
+  "payment_failures": 2910,
+  "plur": {
+   "swap": 655757742735200,
+   "swap_units": 6557577427
+  },
+  "peers_paid": 2042,
+  "ledger_total_before": 442014180107900,
+  "ledger_total_after": 1125858922845300,
+  "ledger_delta_plur": 683844742737400,
+  "new_beneficiaries": 242,
+  "ledger_problems": {},
+  "top_pushsync_warns": {
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   pushsync stream: failed to": 19645,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   unexpected end of fi": 8030,
+   "warn: pushsync got a shallow receipt; chunk stored but shallow \u2014 trying for a deeper storer": 5970,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   unexpected end of file": 4183,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   push to closest chunk b583b": 2,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   c3c42115/7: connecti": 1
+  },
+  "harness": [
+   "0.02 SWAP_ENABLE true ok=true ",
+   "0.52 PEERS 99",
+   "4.21 UPLOAD_START job=0000005254a98ff7 bytes=314572800"
+  ]
+ },
+ "b-stream": {
+  "label": "b-stream",
+  "mode": "stream",
+  "rc": 0,
+  "wall_s": 712.2,
+  "disconnects": 608,
+  "pushsync_warn": 6214,
+  "swap_cheques_delivered": 2480,
+  "swap_cheques_undelivered": 142,
+  "pushsync_reset_lines": 129,
+  "payment_failures": 251,
+  "plur": {
+   "swap": 134728274102600,
+   "swap_units": 1347282741
+  },
+  "peers_paid": 378,
+  "ledger_total_before": 1125866907745300,
+  "ledger_total_after": 1260595181847900,
+  "ledger_delta_plur": 134728274102600,
+  "new_beneficiaries": 9,
+  "ledger_problems": {},
+  "top_pushsync_warns": {
+   "warn: pushsync got a shallow receipt; chunk stored but shallow \u2014 trying for a deeper storer": 2488,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   pushsync stream: failed to": 875,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   push to closest chunk 397c9": 609,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   unexpected end of fi": 586,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   unexpected end of file": 218,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   put: reserve putter.Put: ov": 137
+  },
+  "harness": [
+   "0.02 SWAP_ENABLE true ok=true ",
+   "0.52 PEERS 100",
+   "6.13 STREAM_START seg_bytes=750000 segments=300",
+   "606.14 STREAM_CAPTURE_END pushed=300 dropped_at_push=192"
+  ],
+  "publisher": {
+   "segments_pushed": 301,
+   "segments_published": 86,
+   "segments_listed": 86,
+   "segments_failed": 22,
+   "segments_dropped": 192,
+   "bytes_published": 64500000,
+   "chunks_published": 16082,
+   "sustained_mbit_s": 0.7309421998687193,
+   "publish_ms_p50": 6844,
+   "publish_ms_p95": 59466,
+   "publish_ms_max": 59842,
+   "lag_ms_p50": 16358,
+   "lag_ms_p95": 152668,
+   "lag_ms_max": 174988,
+   "lag_ms_final": 105257,
+   "kept_up": false,
+   "error_count": 23
+  },
+  "publisher_errors": [
+   [
+    "media segment N: timed out after Ns",
+    7
+   ],
+   [
+    "playlist: timed out after Ns",
+    1
+   ]
+  ]
+ },
+ "buy-d21": {
+  "label": "buy-d21",
+  "mode": "buy",
+  "rc": 0,
+  "wall_s": 12.4,
+  "disconnects": 8,
+  "plur": {},
+  "peers_paid": 0,
+  "ledger_total_before": 441989000057900,
+  "ledger_total_after": 441989000057900,
+  "ledger_delta_plur": 0,
+  "new_beneficiaries": 0,
+  "ledger_problems": {},
+  "top_pushsync_warns": {},
+  "harness": []
+ },
+ "c-drive": {
+  "label": "c-drive",
+  "mode": "drive",
+  "rc": 1,
+  "wall_s": 1804.3,
+  "disconnects": 8711,
+  "pushsync_warn": 1530294,
+  "pushsync_reset_lines": 23,
+  "plur": {},
+  "peers_paid": 0,
+  "ledger_total_before": 1125858922845300,
+  "ledger_total_after": 1125858922845300,
+  "ledger_delta_plur": 0,
+  "new_beneficiaries": 0,
+  "ledger_problems": {},
+  "top_pushsync_warns": {
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   pushsync stream: failed to": 590212,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   unexpected end of fi": 98913,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   unexpected end of file": 98372,
+   "warn: pushsync got a shallow receipt; chunk stored but shallow \u2014 trying for a deeper storer": 6133,
+   "warn: 2026-10-03T18:27:23.936054Z  WARN ant_p2p: gateway push walk failed; waiting for peer-set": 2,
+   "warn: 2026-10-03T18:33:39.300839Z  WARN ant_p2p: gateway push walk failed; waiting for peer-set": 2
+  },
+  "harness": [
+   "0.01 SWAP_ENABLE false ok=true ",
+   "0.51 PEERS 98",
+   "4.14 UPLOAD_START job=000000f9b43894ad bytes=314572800",
+   "1804.23 UPLOAD_END status=running wall_s=1800.1 bytes=314572800"
+  ]
+ },
+ "c-stream": {
+  "label": "c-stream",
+  "mode": "stream",
+  "rc": 0,
+  "wall_s": 674.9,
+  "disconnects": 1138,
+  "pushsync_warn": 9992,
+  "plur": {},
+  "peers_paid": 0,
+  "ledger_total_before": 1260595181847900,
+  "ledger_total_after": 1260595181847900,
+  "ledger_delta_plur": 0,
+  "new_beneficiaries": 0,
+  "ledger_problems": {},
+  "top_pushsync_warns": {
+   "warn: pushsync got a shallow receipt; chunk stored but shallow \u2014 trying for a deeper storer": 3075,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   pushsync stream: failed to": 1505,
+   "warn: pushsync attempt failed; retrying same peer once on a fresh stream   unexpected end of fi": 1083,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   push to closest chunk 397c9": 1047,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   unexpected end of file": 359,
+   "warn: pushsync attempt failed; hedging onto the next-closest peer   put: reserve putter.Put: ov": 353
+  },
+  "harness": [
+   "0.02 SWAP_ENABLE false ok=true ",
+   "0.52 PEERS 99",
+   "6.05 STREAM_START seg_bytes=750000 segments=300",
+   "606.05 STREAM_CAPTURE_END pushed=300 dropped_at_push=208"
+  ],
+  "publisher": {
+   "segments_pushed": 301,
+   "segments_published": 75,
+   "segments_listed": 75,
+   "segments_failed": 17,
+   "segments_dropped": 208,
+   "bytes_published": 56250000,
+   "chunks_published": 14025,
+   "sustained_mbit_s": 0.6728981369727747,
+   "publish_ms_p50": 11626,
+   "publish_ms_p95": 59004,
+   "publish_ms_max": 59100,
+   "lag_ms_p50": 53047,
+   "lag_ms_p95": 122899,
+   "lag_ms_max": 146486,
+   "lag_ms_final": 53315,
+   "kept_up": false,
+   "error_count": 17
+  },
+  "publisher_errors": [
+   [
+    "media segment N: timed out after Ns",
+    8
+   ]
+  ]
+ },
+ "dep-b": {
+  "label": "dep-b",
+  "mode": "deposit",
+  "rc": 0,
+  "wall_s": 2.8,
+  "disconnects": 6,
+  "plur": {},
+  "peers_paid": 0,
+  "ledger_total_before": 442014180107900,
+  "ledger_total_after": 442014180107900,
+  "ledger_delta_plur": 0,
+  "new_beneficiaries": 0,
+  "ledger_problems": {},
+  "top_pushsync_warns": {},
+  "harness": []
+ },
+ "dep-b2": {
+  "label": "dep-b2",
+  "mode": "deposit",
+  "rc": 0,
+  "wall_s": 4.7,
+  "disconnects": 9,
+  "plur": {},
+  "peers_paid": 0,
+  "ledger_total_before": 1125866907745300,
+  "ledger_total_after": 1125866907745300,
+  "ledger_delta_plur": 0,
+  "new_beneficiaries": 0,
+  "ledger_problems": {},
+  "top_pushsync_warns": {},
+  "harness": []
+ },
+ "quote-d21": {
+  "label": "quote-d21",
+  "mode": "quote",
+  "rc": 0,
+  "wall_s": 0.3,
+  "disconnects": 2,
+  "plur": {},
+  "peers_paid": 0,
+  "ledger_total_before": 441989000057900,
+  "ledger_total_after": 441989000057900,
+  "ledger_delta_plur": 0,
+  "new_beneficiaries": 0,
+  "ledger_problems": {},
+  "top_pushsync_warns": {},
+  "harness": []
+ },
+ "drive_summary": [
+  {
+   "label": "a-drive",
+   "chunks_total": 77407,
+   "chunks_pushed_final": 71475,
+   "pct": 92.34,
+   "t50": 330.0,
+   "t90": 685.0,
+   "t95": null,
+   "t99": null,
+   "t_last_progress": 750.0,
+   "chunks_s_to_95": null,
+   "mbit_s_to_95": null,
+   "requeued_final": 1769,
+   "wall_cap_s": 1815.9,
+   "disconnects": 6967,
+   "ledger_delta_plur": 25180050000,
+   "xbzz_per_gb": 0.0
+  },
+  {
+   "label": "b-drive",
+   "chunks_total": 77407,
+   "chunks_pushed_final": 77073,
+   "pct": 99.57,
+   "t50": 110.0,
+   "t90": 205.0,
+   "t95": 210.0,
+   "t99": 225.0,
+   "t_last_progress": 245.0,
+   "chunks_s_to_95": 350.2,
+   "mbit_s_to_95": 11.47,
+   "requeued_final": 75,
+   "wall_cap_s": 1805.0,
+   "disconnects": 5954,
+   "ledger_delta_plur": 683844742737400,
+   "xbzz_per_gb": 0.2166
+  },
+  {
+   "label": "c-drive",
+   "chunks_total": 77407,
+   "chunks_pushed_final": 75857,
+   "pct": 98.0,
+   "t50": 110.0,
+   "t90": 195.0,
+   "t95": 215.0,
+   "t99": null,
+   "t_last_progress": 230.0,
+   "chunks_s_to_95": 342.0,
+   "mbit_s_to_95": 11.21,
+   "requeued_final": 14648,
+   "wall_cap_s": 1804.3,
+   "disconnects": 8711,
+   "ledger_delta_plur": 0,
+   "xbzz_per_gb": 0.0
+  }
+ ]
+}
