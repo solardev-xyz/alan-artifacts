@@ -1,0 +1,11 @@
+uprobe:/tmp/rg/bin/antd-bsym:_RNvMs1_NtCsa7mhdaV2H0d_7ant_p2p4swapNtB5_14OutboundLedger13record_issued { @ri[tid] = nsecs; }
+uretprobe:/tmp/rg/bin/antd-bsym:_RNvMs1_NtCsa7mhdaV2H0d_7ant_p2p4swapNtB5_14OutboundLedger13record_issued /@ri[tid]/ { printf("RI %lld %lld\n", @ri[tid], nsecs); @rec_issued_us = hist((nsecs-@ri[tid])/1000); delete(@ri[tid]); }
+uprobe:/tmp/rg/bin/antd-bsym:_RNvNtCsa7mhdaV2H0d_7ant_p2p4swap21load_outbound_section { @lo[tid] = nsecs; }
+uretprobe:/tmp/rg/bin/antd-bsym:_RNvNtCsa7mhdaV2H0d_7ant_p2p4swap21load_outbound_section /@lo[tid]/ { printf("LO %lld %lld\n", @lo[tid], nsecs); @load_us = hist((nsecs-@lo[tid])/1000); delete(@lo[tid]); }
+uprobe:/tmp/rg/bin/antd-bsym:_RNvNtCsa7mhdaV2H0d_7ant_p2p4swap19write_outbound_file { @wo[tid] = nsecs; }
+uretprobe:/tmp/rg/bin/antd-bsym:_RNvNtCsa7mhdaV2H0d_7ant_p2p4swap19write_outbound_file /@wo[tid]/ { printf("WO %lld %lld\n", @wo[tid], nsecs); @write_us = hist((nsecs-@wo[tid])/1000); delete(@wo[tid]); }
+uprobe:/tmp/rg/bin/antd-bsym:_RNvMs1_NtCsa7mhdaV2H0d_7ant_p2p4swapNtB5_14OutboundLedger12total_issued { @ti[tid] = nsecs; }
+uretprobe:/tmp/rg/bin/antd-bsym:_RNvMs1_NtCsa7mhdaV2H0d_7ant_p2p4swapNtB5_14OutboundLedger12total_issued /@ti[tid]/ { @total_issued_us = hist((nsecs-@ti[tid])/1000); delete(@ti[tid]); }
+uprobe:/tmp/rg/bin/antd-bsym:_RNvMNtNtNtNtCsgHYyB3hU8Ec_3std3sys4sync5mutex5futexNtB2_5Mutex14lock_contended { @lc[tid] = nsecs; @blocked++; }
+uretprobe:/tmp/rg/bin/antd-bsym:_RNvMNtNtNtNtCsgHYyB3hU8Ec_3std3sys4sync5mutex5futexNtB2_5Mutex14lock_contended /@lc[tid]/ { @mutex_wait_us = hist((nsecs-@lc[tid])/1000); @mutex_wait_total_ms = sum((nsecs-@lc[tid])/1000000); delete(@lc[tid]); @blocked--; }
+interval:ms:1 { @blocked_threads = lhist(@blocked, 0, 30, 1); printf("B %lld %d\n", nsecs, @blocked); }
