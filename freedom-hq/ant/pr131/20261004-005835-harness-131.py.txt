@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+"""Paid cold-download burst bench for issue #131.
+
+One run = fresh data dir seeded with the chequebook's outbound ledger,
+antd started with the manual chequebook (issuer key read from file into
+the child's environment only), fire N requests at once (half /bzz/<ref>/,
+half /bytes/<ref>) the moment the node logs that SWAP pays, wait for them,
+let in-flight cheques finish, stop antd, parse the log, copy the ledger back
+only if nothing shrank / was moved aside / was marked lost.
+
+usage: bench.py <label> <antd-binary> <n> <port>
+"""
+import json, os, re, shutil, signal, subprocess, sys, threading, time, urllib.request
+
+S = os.environ["ALAN_SCRATCH"]
+CB = "0x370e6965a8c169dbf3456edf852f5a7ffa2f1e81"
+LEDGER = f"{S}/ledger-current.json"
+REFS = f"{S}/refs-pool.txt"
+USED = f"{S}/refs-used.txt"
+RESULTS = f"{S}/results.jsonl"
+
+label, binary, n, port = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+swap = os.environ.get("SWAP", "true")
+
+used = set(open(USED).read().split()) if os.path.exists(USED) else set()
+pool = [r for r in open(REFS).read().split() if r not in used]
+refs = pool[:n]
+assert len(refs) == n
+with open(USED, "a") as f:
+    f.write("\n".join(refs) + "\n")
+
+dd = f"{S}/runs/{label}"
+shutil.rmtree(dd, ignore_errors=True)
+os.makedirs(dd)
+before = json.load(open(LEDGER))
+shutil.copy(LEDGER, f"{dd}/pushsync_outbound.json")
+logp = f"{S}/logs/{label}.log"
+os.makedirs(f"{S}/logs", exist_ok=True)
+
+env = dict(os.environ)
+env["SWAP_OWNER_KEY"] = open(os.path.expanduser("~/alan/secrets/gnosis-test.key")).read().strip()
+args = [binary, "--data-dir", dd, "--api-addr", f"127.0.0.1:{port}", "--no-control-socket",
+        "--no-disk-cache", "--gnosis-logs-rpc-url", "", "--gnosis-rpc-url", "https://rpc.gnosischain.com",
+        "--chequebook", CB, "--no-auto-chequebook", "--swap-enable", swap,
+        "--log-level", "info,ant_retrieval::accounting=debug,ant_p2p::pushsync_swap=info,ant_p2p::pseudosettle=info"]
+logf = open(logp, "w")
+t_start = time.time()
+proc = subprocess.Popen(args, stdout=logf, stderr=subprocess.STDOUT, env=env)
+del env["SWAP_OWNER_KEY"]
+print(f"{label}: antd pid {proc.pid}", flush=True)
+
+def wait_ready():
+    deadline = time.time() + 120
+    pat = "paying=true" if swap == "true" else "settlement"  # unpaid: fire on first peers after chain init
+    while time.time() < deadline:
+        txt = open(logp).read()
+        if swap == "true" and "paying=true" in txt:
+            return True
+        if swap != "true" and "retrieval" in txt and "funds" in txt:
+            return True
+        time.sleep(0.05)
+    return False
+
+ok = wait_ready()
+t_fire = time.time()
+peers = 0
+try:
+    peers = len(json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/peers", timeout=5))["peers"])
+except Exception as e:
+    pass
+print(f"{label}: ready={ok} after {t_fire - t_start:.2f}s, {peers} peers", flush=True)
+
+res = []
+def get(i, ref):
+    path = f"/bzz/{ref}/" if i % 2 == 0 else f"/bytes/{ref}"
+    t0 = time.time(); ttfb = None; nbytes = 0; status = None; clen = None; err = None
+    try:
+        r = urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=180)
+        status = r.status; clen = int(r.headers.get("content-length") or -1)
+        while True:
+            b = r.read(65536)
+            if ttfb is None: ttfb = time.time() - t0
+            if not b: break
+            nbytes += len(b)
+    except urllib.error.HTTPError as e:
+        status = e.code; err = e.read()[:300].decode(errors="replace")
+    except Exception as e:
+        err = repr(e)[:300]
+    res.append(dict(path=path[:12], ref=ref, status=status, bytes=nbytes, clen=clen,
+                    ttfb=round(ttfb or 0, 3), total=round(time.time() - t0, 3), err=err))
+
+ths = [threading.Thread(target=get, args=(i, r)) for i, r in enumerate(refs)]
+for t in ths: t.start()
+for t in ths: t.join()
+wall = max(r["total"] for r in res)
+time.sleep(7)  # let in-flight cheques end (5 s deadline + grace)
+proc.send_signal(signal.SIGINT)
+try:
+    proc.wait(20)
+except subprocess.TimeoutExpired:
+    proc.kill(); proc.wait()
+logf.close()
+
+log = re.sub(r"\x1b\[[0-9;]*m", "", open(logp).read())
+emit = re.findall(r"emitted SWAP cheque.*", log)
+cheques = []
+for line in log.splitlines():
+    if "emitted SWAP cheque" not in line: continue
+    g = lambda k: (re.search(rf"\b{k}=(\S+)", line) or [None, None])[1]
+    cheques.append(dict(ts=line[:27], peer=g("peer"), delivered=g("delivered") == "true",
+                        units=int(g("units")), plur=int(g("plur"))))
+fails = len(re.findall(r"SWAP payment failed", log))
+timeouts = len(re.findall(r"not counted as delivered: timed out", log))
+conn_drop = len(re.findall(r"not counted as delivered: a connection", log))
+disconnects = len(re.findall(r"ConnectionClosed|connection closed", log))
+
+after_path = f"{dd}/pushsync_outbound.json"
+after = json.load(open(after_path))
+shrank = [k for k, v in before.items() if int(after.get(k, 0)) < int(v)]
+lost = [f for f in os.listdir(dd) if "lost" in f or "corrupt" in f or f.startswith("pushsync_outbound.json.")]
+issued = sum(int(v) for v in after.values()) - sum(int(v) for v in before.values())
+if not shrank and not lost:
+    shutil.copy(after_path, LEDGER)
+    ledger_note = "copied back"
+else:
+    ledger_note = f"NOT copied back: shrank={len(shrank)} lost={lost}"
+complete = sum(1 for r in res if r["status"] == 200 and r["bytes"] == r["clen"])
+total_bytes = sum(r["bytes"] for r in res)
+units = sorted(c["units"] for c in cheques)
+per_peer = {}
+for c in cheques: per_peer[c["peer"]] = per_peer.get(c["peer"], 0) + 1
+out = dict(label=label, binary=os.path.basename(binary), n=n, swap=swap, peers_at_fire=peers,
+           ready_s=round(t_fire - t_start, 2), wall=wall, complete=complete,
+           chunks_per_s=round(total_bytes / 4096 / wall, 1), mbit_s=round(total_bytes * 8 / wall / 1e6, 2),
+           ttfb=sorted(r["ttfb"] for r in res), totals=sorted(r["total"] for r in res),
+           cheques=len(cheques), delivered=sum(c["delivered"] for c in cheques),
+           undelivered_timeout=timeouts, undelivered_conn=conn_drop, payment_failures=fails,
+           peers_paid=len(per_peer), max_cheques_one_peer=max(per_peer.values(), default=0),
+           units_min=units[0] if units else 0, units_median=units[len(units) // 2] if units else 0,
+           units_max=units[-1] if units else 0, units_sum=sum(units),
+           plur_logged=sum(c["plur"] for c in cheques), plur_ledger=issued, ledger=ledger_note,
+           errors=[r for r in res if r["err"] or r["status"] != 200])
+with open(RESULTS, "a") as f:
+    f.write(json.dumps(out) + "\n")
+shutil.rmtree(dd, ignore_errors=True)
+print(json.dumps({k: v for k, v in out.items() if k not in ("ttfb", "totals")}), flush=True)
+import json, os, secrets, shutil, signal, subprocess, sys, time, urllib.request
+S=os.environ["ALAN_SCRATCH"]; amount=int(sys.argv[1]); port=31911
+CB="0x370e6965a8c169dbf3456edf852f5a7ffa2f1e81"
+dd=f"{S}/deposit-dd"; shutil.rmtree(dd, ignore_errors=True); os.makedirs(dd, mode=0o700)
+key=open(os.path.expanduser("~/alan/secrets/gnosis-test.key")).read().strip()
+key=key[2:] if key.startswith("0x") else key
+fd=os.open(f"{dd}/identity.json", os.O_WRONLY|os.O_CREAT, 0o600)
+os.write(fd, json.dumps({"signing_key":key,"overlay_nonce":secrets.token_hex(32)}).encode()); os.close(fd)
+shutil.copy(f"{S}/ledger-current.json", f"{dd}/pushsync_outbound.json")
+env=dict(os.environ); env["SWAP_OWNER_KEY"]=key; del key
+logf=open(f"{S}/logs/deposit-{int(time.time())}.log","w")
+p=subprocess.Popen([f"{S}/antd-main","--data-dir",dd,"--api-addr",f"127.0.0.1:{port}","--no-control-socket","--gnosis-logs-rpc-url","","--gnosis-rpc-url","https://rpc.gnosischain.com","--chequebook",CB,"--no-auto-chequebook","--swap-enable","false"],stdout=logf,stderr=subprocess.STDOUT,env=env)
+del env
+try:
+    for i in range(120):
+        time.sleep(1)
+        try:
+            b=urllib.request.urlopen(f"http://127.0.0.1:{port}/chequebook/balance",timeout=5).read().decode()
+            print("balance before:",b); break
+        except Exception as e: pass
+    req=urllib.request.Request(f"http://127.0.0.1:{port}/chequebook/deposit?amount={amount}",method="POST")
+    try:
+        r=urllib.request.urlopen(req,timeout=180); print("deposit:",r.status,r.read().decode())
+    except urllib.error.HTTPError as e: print("deposit failed:",e.code,e.read().decode())
+    time.sleep(10)
+    print("balance after:",urllib.request.urlopen(f"http://127.0.0.1:{port}/chequebook/balance",timeout=10).read().decode())
+finally:
+    p.send_signal(signal.SIGINT)
+    try: p.wait(20)
+    except subprocess.TimeoutExpired: p.kill(); p.wait()
+    shutil.rmtree(dd, ignore_errors=True)
+    print("data dir removed:", not os.path.exists(dd))
+import json, urllib.request, sys
+sys.path.insert(0, __import__('os').path.dirname(__file__))
+from keccak import keccak256
+RPC="https://rpc.gnosischain.com"
+BZZ="0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da"
+CB="0x370e6965a8c169dbf3456edf852f5a7ffa2f1e81"
+W="0xD5572300E441b77b72bdd318BBFA7b97A1F03096"
+def rpc(method,params):
+    p={"jsonrpc":"2.0","id":1,"method":method,"params":params}
+    r=urllib.request.urlopen(urllib.request.Request(RPC,json.dumps(p).encode(),{"Content-Type":"application/json"}),timeout=20)
+    return json.load(r)["result"]
+def call(to,sig,arg=""):
+    return int(rpc("eth_call",[{"to":to,"data":"0x"+keccak256(sig.encode())[:4].hex()+arg},"latest"]),16)
+addr=lambda a:"0"*24+a[2:].lower()
+cb=call(BZZ,"balanceOf(address)",addr(CB))
+paid=call(CB,"totalPaidOut()")
+wb=call(BZZ,"balanceOf(address)",addr(W))
+xdai=int(rpc("eth_getBalance",[W,"latest"]),16)
+nonce=int(rpc("eth_getTransactionCount",[W,"latest"]),16)
+issued=0
+if len(sys.argv)>1:
+    issued=sum(int(v) for v in json.load(open(sys.argv[1])).values())
+print(f"block {int(rpc('eth_blockNumber',[]),16)}")
+print(f"chequebook balance {cb/1e16:.7f} xBZZ ({cb} PLUR), totalPaidOut {paid/1e16:.7f} ({paid})")
+print(f"deposited (balance+paidOut) {(cb+paid)/1e16:.7f}; ledger issued {issued/1e16:.7f} ({issued}); spendable {(cb+paid-issued)/1e16:.7f} xBZZ")
+print(f"wallet {W}: {wb/1e16:.7f} xBZZ, {xdai/1e18:.7f} xDAI, nonce {nonce}")
+import re,sys,statistics as st
+from datetime import datetime
+log=re.sub(r"\x1b\[[0-9;]*m","",open(sys.argv[1]).read())
+ch=[];fails=[]
+for line in log.splitlines():
+    if "emitted SWAP cheque" in line:
+        g=lambda k:(re.search(rf"\b{k}=(\S+)",line) or [None,None])[1]
+        t=datetime.fromisoformat(line[:26].replace('Z',''))
+        ch.append((t,g("peer"),g("delivered")=="true",int(g("units")),int(g("plur")),line))
+    if "SWAP payment failed" in line: fails.append(line)
+print("cheques",len(ch),"delivered",sum(c[2] for c in ch),"plur",sum(c[4] for c in ch))
+u=sorted(c[3] for c in ch); print("units min/p10/med/p90/max",u[0],u[len(u)//10],u[len(u)//2],u[9*len(u)//10],u[-1], "mean",int(st.mean(u)))
+if ch: 
+    span=(ch[-1][0]-ch[0][0]).total_seconds(); print("first..last cheque span %.2fs"%span)
+per={}
+for c in ch: per.setdefault(c[1],[]).append(c[0])
+gaps=[(b-a).total_seconds() for ts in per.values() for a,b in zip(ts,ts[1:])]
+if gaps:
+    gaps.sort(); print("peers",len(per),"per-peer cheques max",max(len(v) for v in per.values()),"gap between cheques to one peer p10/med/p90",gaps[len(gaps)//10],gaps[len(gaps)//2],gaps[9*len(gaps)//10])
+import collections
+print("fail reasons",collections.Counter(re.sub(r".*SWAP payment failed[^:]*: ","",f)[:70] for f in fails).most_common(6))
+import heapq, random
+L=1_687_500; R=450_000; PRICE=305_000
+def sim(T, F, C, rate, dur=20.0, d=0.06, rtt=0.08, seed=1, applied_trigger=False):
+    rnd=random.Random(seed)
+    st=dict(bal=0,res=0,sh=0,ong=False,lr=0.0,rif=False,lrc=0.0)
+    ev=[]; seq=[0]
+    def push(at,kind,data=None): seq[0]+=1; heapq.heappush(ev,(at,seq[0],kind,data))
+    cheques=[]; chunks=0; waits=[]
+    def cheque_due(now, expected):
+        if st['bal']==0 or expected-st['sh']<T or st['bal']-st['sh']<R or st['ong']: return
+        rd=int(now-st['lr'])*R
+        amt=st['bal']-rd-st['sh']
+        if amt<max(F,90_000): return
+        st['ong']=True; st['sh']+=amt; push(now+C*rnd.uniform(0.7,1.3),'paid',amt)
+    t=0
+    while t<dur:
+        t+=rnd.expovariate(rate); push(t,'fetch',t)
+    push(0.1,'tick')
+    while ev:
+        now,_,kind,data=heapq.heappop(ev)
+        if now>dur+5: break
+        if kind=='fetch':
+            allow = R if now-st['lr']>=1 else 0
+            nxt=st['bal']+st['res']+PRICE
+            cheque_due(now, nxt)
+            if nxt<=L+allow:
+                st['res']+=PRICE; push(now+d*rnd.uniform(0.5,1.5),'apply'); waits.append(now-data)
+            else: push(now+0.05,'fetch',data)
+        elif kind=='apply':
+            st['res']-=PRICE; st['bal']+=PRICE; chunks+=1
+            cheque_due(now, st['bal']+st['res'])
+        elif kind=='paid':
+            st['ong']=False; st['sh']-=data; st['bal']=max(0,st['bal']-data); cheques.append(data)
+        elif kind=='tick':
+            exp=st['bal']+st['res']-st['sh']; refable=st['bal']-st['sh']
+            if not st['rif'] and exp>=675_000 and refable>=R and now>=st['lrc']+1.0:
+                st['rif']=True; push(now+rtt,'refreshed')
+            push(now+0.1,'tick')
+        elif kind=='refreshed':
+            el=now-st['lr']; credit=min(st['bal'], int(el)*R)
+            st['bal']-=credit; st['lr']=now; st['lrc']=now; st['rif']=False
+    waits.sort()
+    return len(cheques), (sum(cheques)/len(cheques) if cheques else 0), waits[len(waits)//2], waits[int(len(waits)*.95)], chunks
+for C in (0.13,0.5):
+  for rate in (2,4,8,16):
+    print(f"C={C} demand {rate} chunks/s")
+    for T,F in ((675_000,90_000),(675_000,450_000),(1_000_000,450_000),(1_350_000,450_000)):
+        r=[sim(T,F,C,rate,seed=s) for s in range(8)]
+        n=sum(x[0] for x in r)/8; m=sum(x[1] for x in r)/8; w50=sum(x[2] for x in r)/8; w95=sum(x[3] for x in r)/8
+        print(f"  T={T/1e6:.3f}M F={F/1e3:.0f}k cheques {n:5.1f} mean {m/1e3:5.0f}k  admission wait p50 {w50*1000:4.0f}ms p95 {w95*1000:4.0f}ms")
